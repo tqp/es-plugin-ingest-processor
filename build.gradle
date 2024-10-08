@@ -1,0 +1,66 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'org.example.plugin'
+version = '1.0.0-SNAPSHOT'
+
+def esVersion = '8.15.1'
+def pluginName = 'es-plugin-ingest-processor'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "org.elasticsearch:elasticsearch:${esVersion}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+task createPluginDescriptor {
+    def descriptorFile = file("${buildDir}/resources/main/plugin-descriptor.properties")
+    outputs.file(descriptorFile)
+    doLast {
+        descriptorFile.parentFile.mkdirs()
+        descriptorFile.text = """
+            description=Custom ingest processor plugin for Elasticsearch
+            version=${project.version}
+            name=${pluginName}
+            classname=org.example.plugin.CustomIngestProcessorPlugin
+            java.version=17
+            elasticsearch.version=${esVersion}
+        """.stripIndent()
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn createPluginDescriptor
+}
+
+tasks.named('jar') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.main.output
+}
+
+tasks.register('bundlePlugin', Zip) {
+    archiveFileName = "${pluginName}-${project.version}.zip"
+    from(jar)
+    from(configurations.runtimeClasspath) {
+        into 'elasticsearch'
+    }
+    from("${buildDir}/resources/main") {
+        include 'plugin-descriptor.properties'
+    }
+    from('src/main/resources') {
+        include 'plugin-security.policy'
+    }
+}
+
+tasks.named('build') {
+    dependsOn bundlePlugin
+}
