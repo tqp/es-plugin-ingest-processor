@@ -13,6 +13,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.slf4j:slf4j-api:1.7.36'
     compileOnly "org.elasticsearch:elasticsearch:${esVersion}"
 }
 
@@ -22,43 +23,30 @@ java {
     }
 }
 
-task createPluginDescriptor {
-    def descriptorFile = file("${buildDir}/resources/main/plugin-descriptor.properties")
+tasks.register('createPluginDescriptor') {
+    def sourceFile = file("src/main/resources/plugin-descriptor.properties")
+    def descriptorFile = file("src/main/resources/main/plugin-descriptor.properties")
+
+    inputs.file(sourceFile)
     outputs.file(descriptorFile)
+
     doLast {
         descriptorFile.parentFile.mkdirs()
-        descriptorFile.text = """
-            description=Custom ingest processor plugin for Elasticsearch
-            version=${project.version}
-            name=${pluginName}
-            classname=org.example.plugin.CustomIngestProcessorPlugin
-            java.version=17
-            elasticsearch.version=${esVersion}
-        """.stripIndent()
+        def content = sourceFile.text
+        content = content.replace('${project.version}', project.version.toString())
+                .replace('${pluginName}', pluginName.toString())
+                .replace('${esVersion}', esVersion.toString())
+        descriptorFile.text = content
     }
-}
-
-tasks.named('processResources') {
-    dependsOn createPluginDescriptor
-}
-
-tasks.named('jar') {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from sourceSets.main.output
 }
 
 tasks.register('bundlePlugin', Zip) {
     archiveFileName = "${pluginName}-${project.version}.zip"
     from(jar)
-    from(configurations.runtimeClasspath) {
-        into 'elasticsearch'
-    }
-    from("${buildDir}/resources/main") {
-        include 'plugin-descriptor.properties'
-    }
-    from('src/main/resources') {
-        include 'plugin-security.policy'
-    }
+}
+
+tasks.named('processResources') {
+    dependsOn createPluginDescriptor
 }
 
 tasks.named('build') {

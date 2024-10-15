@@ -12,7 +12,7 @@ and started using a docker-compose.yml file (example included below).
 
 Run the following command from the root of the project:
 ```
-./gradlew clean bundlePlugin
+conf
 ```
 This will create .zip file: /build/distributions/es-plugin-ingest-processor-1.0.0-SNAPSHOT.zip
 
